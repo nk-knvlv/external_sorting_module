@@ -1,0 +1,109 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+
+const app = express();
+
+app.set('view engine', 'ejs'); // устанавливаем шаблонизатор ejs
+
+app.use(bodyParser.urlencoded({ extended: false })); // подключаем парсер для данных из форм
+
+// Маршрут для вывода главной страницы
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+// Маршрут для вывода страницы чтения файла
+app.get('/readfile', (req, res) => {
+    res.render('readfile');
+});
+
+const fs = require('fs');
+
+const startLine = 0; // начальная строка (с нуля)
+const numLines = 3; // количество строк для чтения
+console.log(`const numLines = ${numLines}`);
+
+
+app.post('/readfile', (req, res) => {
+    const filePath = req.body.file;
+
+    let daddy = new daddySorter(filePath);
+
+    const options = {
+        start: 100, // начать считывание с 101-го байта
+        encoding: 'utf-8',
+        highWaterMark: 2.1 * 1024 * 1024
+    };
+
+    const stream = fs.createReadStream(filePath, options);
+
+    // Создаем поток для записи измененного файла
+    const writeStream = fs.createWriteStream('newFile.txt', { encoding: 'utf8' });
+
+    let data = [];
+    let lineCount = 0;
+    let isClosed = false; // добавляем флаг для отслеживания закрытия потока
+
+    stream.on('data', chunk => {
+        if (isClosed) return; // проверяем, был ли поток закрыт
+
+        const chunkLines = chunk.split('\n');
+
+        // console.log(`====const chunkLines = chunk.split('n'); ====`);
+        // console.table(chunkLines);
+
+        const startIndex = (lineCount === 0) ? startLine : 0;
+        const endIndex = startIndex + chunkLines.length - 1;
+
+        if (endIndex < startLine) {
+            lineCount += chunkLines.length;
+            return;
+        }
+
+        const start = Math.max(0, startLine - lineCount);
+
+        const end = Math.min(chunkLines.length - 1, numLines - data.length + start);
+
+        data.push(...chunkLines.slice(start, end));
+
+        lineCount += chunkLines.length;
+        if (data.length >= numLines) {
+            console.log('destroy in stream');
+            const used = process.memoryUsage().heapUsed / 1024 / 1024;
+            console.log(`The script uses approximately ${Math.round(used * 100) / 100} MB`);
+            res.render('readfile', { data });
+            stream.destroy();
+            isClosed = true;
+        }
+    });
+
+    stream.on('end', () => {
+        console.log('end');
+        res.render('readfile', { data });
+    });
+
+
+    stream.on('error', err => {
+        console.log('error');
+        console.error(err);
+        res.send(err.toString());
+    });
+});
+
+app.listen(3000, () => {
+    console.log('Server started on port 3000 boy');
+});
+
+
+
+class daddySorter{
+
+    constructor(filePath){
+        this.filePath = filePath
+    }
+    devideFile(){
+        let devidedFilesNames = new Map();
+
+        return devidedFilesNames
+    }
+}
